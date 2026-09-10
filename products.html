@@ -1,0 +1,106 @@
+<!DOCTYPE html>
+<html lang="ar" dir="rtl" id="htmlRoot">
+<head>
+  <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+
+  <title>Dev Masters  Store - المنتجات</title>
+  <link rel="stylesheet" href="style.css">
+</head>
+<body>
+
+  <header class="navbar">
+    <div class="logo">PARFUM</div>
+    <nav class="nav-links">
+      <a href="index.html" data-ar="الرئيسية" data-en="Home">الرئيسية</a>
+      <a href="products.html" data-ar="المنتجات" data-en="Products">المنتجات</a>
+      <a href="index.html#about" data-ar="من نحن" data-en="About">من نحن</a>
+      <a href="index.html#contact" data-ar="تواصل" data-en="Contact">تواصل</a>
+    </nav>
+    <div class="nav-actions">
+      <button class="lang-btn" id="langBtn">EN</button>
+      <button class="cart-btn" id="cartBtn">
+        🛒 <span class="cart-count" id="cartCount">0</span>
+      </button>
+    </div>
+  </header>
+
+  <section class="products-page">
+    <h2 class="section-title" data-ar="منتجاتنا" data-en="Our Products">منتجاتنا</h2>
+
+    <div class="filter-bar">
+      <button class="filter-btn active" data-filter="all" data-ar="الكل" data-en="All">الكل</button>
+      <button class="filter-btn" data-filter="men" data-ar="رجالي" data-en="Men">رجالي</button>
+      <button class="filter-btn" data-filter="women" data-ar="حريمي" data-en="Women">حريمي</button>
+      <button class="filter-btn" data-filter="unisex" data-ar="يونيسكس" data-en="Unisex">يونيسكس</button>
+    </div>
+
+    <div class="products-grid" id="productsGrid"></div>
+  </section>
+
+  <footer id="contact">
+    <p data-ar="تواصل معنا: 01015263209" data-en="Contact us: 01015263209">تواصل معنا: 01015263209</p>
+    <p data-ar="© 2026 متجر بارفيوم. جميع الحقوق محفوظة." data-en="© 2026 Parfum Store. All rights reserved.">© 2026 متجر بارفيوم. جميع الحقوق محفوظة.</p>
+  </footer>
+
+  <div class="cart-overlay" id="cartOverlay"></div>
+  <aside class="cart-drawer" id="cartDrawer">
+    <div class="cart-header">
+      <h3 data-ar="سلة المشتريات" data-en="Shopping Cart">سلة المشتريات</h3>
+      <button class="close-cart" id="closeCart">✕</button>
+    </div>
+    <div class="cart-items" id="cartItems">
+      <p class="empty-cart" data-ar="السلة فارغة" data-en="Cart is empty">السلة فارغة</p>
+    </div>
+    <div class="cart-footer">
+      <div class="cart-total">
+        <span data-ar="الإجمالي:" data-en="Total:">الإجمالي:</span>
+        <span id="cartTotal">0 ج.م</span>
+      </div>
+      <button class="checkout-btn" data-ar="إتمام الشراء" data-en="Checkout">إتمام الشراء</button>
+    </div>
+  </aside>
+
+  <div class="modal-overlay" id="checkoutOverlay"></div>
+  <div class="checkout-modal" id="checkoutModal">
+    <div class="modal-header">
+      <h3 data-ar="إتمام الطلب" data-en="Complete Order">إتمام الطلب</h3>
+      <button class="close-modal" id="closeCheckout">✕</button>
+    </div>
+    <form id="checkoutForm" class="checkout-form">
+      <label data-ar="الاسم" data-en="Name">الاسم</label>
+      <input type="text" id="custName" required>
+
+      <label data-ar="رقم التليفون" data-en="Phone Number">رقم التليفون</label>
+      <input type="tel" id="custPhone" required>
+
+      <label data-ar="طريقة الاستلام" data-en="Delivery Method">طريقة الاستلام</label>
+      <div class="radio-group">
+        <label><input type="radio" name="deliveryMethod" value="delivery" checked> <span data-ar="توصيل (+30 ج.م)" data-en="Delivery (+30 EGP)">توصيل (+30 ج.م)</span></label>
+        <label><input type="radio" name="deliveryMethod" value="pickup"> <span data-ar="استلام من المحل (مجانًا)" data-en="Pickup from store (Free)">استلام من المحل (مجانًا)</span></label>
+      </div>
+
+      <div id="addressField">
+        <label data-ar="العنوان" data-en="Address">العنوان</label>
+        <input type="text" id="custAddress" required>
+      </div>
+
+      <label data-ar="طريقة الدفع" data-en="Payment Method">طريقة الدفع</label>
+      <div class="radio-group">
+        <label><input type="radio" name="paymentMethod" value="cash" checked> <span data-ar="دفع نقدي" data-en="Cash">دفع نقدي</span></label>
+        <label><input type="radio" name="paymentMethod" value="wallet"> <span data-ar="محفظة إلكترونية" data-en="E-Wallet">محفظة إلكترونية</span></label>
+      </div>
+
+      <div class="modal-total">
+        <span data-ar="الإجمالي:" data-en="Total:">الإجمالي:</span>
+        <span id="modalTotal">0 ج.م</span>
+      </div>
+
+      <button type="submit" class="btn-primary" data-ar="تأكيد الطلب" data-en="Confirm Order">تأكيد الطلب</button>
+    </form>
+  </div>
+
+  <script src="store.js"></script>
+  <script src="script.js"></script>
+</body>
+</html>
