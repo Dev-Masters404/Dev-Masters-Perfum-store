@@ -41,13 +41,14 @@ document.querySelectorAll('.admin-tab').forEach(tab => {
 // ---------- Orders ----------
 let orderStatusFilter = 'all';
 
-function renderOrders() {
-  const allOrders = getOrders();
+async function renderOrders() {
+  const container = document.getElementById('ordersList');
+  container.innerHTML = '<p class="empty-state">جاري التحميل...</p>';
+
+  const allOrders = await getOrders();
   const orders = orderStatusFilter === 'all'
     ? allOrders
     : allOrders.filter(o => o.status === orderStatusFilter);
-
-  const container = document.getElementById('ordersList');
 
   if (orders.length === 0) {
     container.innerHTML = '<p class="empty-state">لا يوجد طلبات حتى الآن</p>';
@@ -65,10 +66,8 @@ function renderOrders() {
       </span>
       <p>📞 ${order.phone}</p>
       ${order.address ? `<p>📍 ${order.address}</p>` : ''}
-      <p>${order.delivery === 'delivery' ? '🚚 توصيل' : '🏪 استلام من المحل'} | ${order.payment === 'cash' ? '💵 نقدي' : '💳 محفظة إلكترونية'}</p>
-      <ul class="order-items">
-        ${order.items.map(item => `<li>${item.nameAr} × ${item.qty}</li>`).join('')}
-      </ul>
+      <p>${order.delivery} | ${order.payment}</p>
+      <p class="order-items-raw">${order.items}</p>
       <div class="order-total">الإجمالي: ${order.total} ج.م</div>
       <button class="toggle-status-btn" data-id="${order.id}" data-status="${order.status}">
         ${order.status === 'completed' ? 'رجّع قيد التنفيذ' : 'تأكيد التنفيذ'}
@@ -77,11 +76,12 @@ function renderOrders() {
   `).join('');
 
   document.querySelectorAll('.toggle-status-btn').forEach(btn => {
-    btn.addEventListener('click', () => {
-      const id = Number(btn.dataset.id);
+    btn.addEventListener('click', async () => {
+      const id = btn.dataset.id;
       const current = btn.dataset.status;
       const newStatus = current === 'completed' ? 'pending' : 'completed';
-      updateOrderStatus(id, newStatus);
+      btn.disabled = true;
+      await updateOrderStatus(id, newStatus);
       renderOrders();
     });
   });
@@ -97,9 +97,11 @@ document.querySelectorAll('.order-filter-btn').forEach(btn => {
 });
 
 // ---------- Products ----------
-function renderAdminProducts() {
-  const products = getProducts();
+async function renderAdminProducts() {
   const container = document.getElementById('adminProductsList');
+  container.innerHTML = '<p class="empty-state">جاري التحميل...</p>';
+
+  const products = await getProducts();
   container.innerHTML = products.map(p => `
     <div class="admin-product-row">
       <img src="${p.image}" alt="${p.nameAr}">
@@ -112,10 +114,9 @@ function renderAdminProducts() {
   `).join('');
 
   document.querySelectorAll('.delete-btn').forEach(btn => {
-    btn.addEventListener('click', () => {
-      const id = Number(btn.dataset.id);
-      const updated = getProducts().filter(p => p.id !== id);
-      saveProducts(updated);
+    btn.addEventListener('click', async () => {
+      btn.disabled = true;
+      await deleteProduct(btn.dataset.id);
       renderAdminProducts();
     });
   });
@@ -125,11 +126,12 @@ function categoryLabel(cat) {
   return { men: 'رجالي', women: 'حريمي', unisex: 'يونيسكس' }[cat] || cat;
 }
 
-document.getElementById('addProductForm').addEventListener('submit', (e) => {
+document.getElementById('addProductForm').addEventListener('submit', async (e) => {
   e.preventDefault();
-  const products = getProducts();
+  const submitBtn = e.target.querySelector('button[type="submit"]');
+  submitBtn.disabled = true;
+
   const newProduct = {
-    id: Date.now(),
     nameAr: document.getElementById('newNameAr').value,
     nameEn: document.getElementById('newNameEn').value,
     price: Number(document.getElementById('newPrice').value),
@@ -137,8 +139,9 @@ document.getElementById('addProductForm').addEventListener('submit', (e) => {
     image: document.getElementById('newImage').value || 'images/perfume1.jpg',
     trending: document.getElementById('newTrending').checked
   };
-  products.push(newProduct);
-  saveProducts(products);
-  renderAdminProducts();
+
+  await saveProduct(newProduct);
+  await renderAdminProducts();
   e.target.reset();
+  submitBtn.disabled = false;
 });

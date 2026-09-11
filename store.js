@@ -1,44 +1,84 @@
-const DEFAULT_PRODUCTS = [
-  { id: 1, nameAr: "ديور سوفاج", nameEn: "Dior Sauvage", price: 1200, category: "men", image: "images/perfume1.jpg", trending: true },
-  { id: 2, nameAr: "شانيل بلو", nameEn: "Chanel Bleu", price: 1500, category: "men", image: "images/perfume2.jpg", trending: true },
-  { id: 3, nameAr: "توم فورد", nameEn: "Tom Ford", price: 1800, category: "unisex", image: "images/perfume3.jpg", trending: false },
-  { id: 4, nameAr: "فيرساتشي", nameEn: "Versace", price: 1000, category: "women", image: "images/perfume4.jpg", trending: false },
-  { id: 5, nameAr: "لانكوم لافي", nameEn: "Lancôme La Vie", price: 1400, category: "women", image: "images/perfume5.jpg", trending: true },
-  { id: 6, nameAr: "جوتشي بلوم", nameEn: "Gucci Bloom", price: 1300, category: "unisex", image: "images/perfume6.jpg", trending: false }
-];
+const WEBHOOK_URL = "https://script.google.com/macros/s/AKfycbxF-aEbSIG21EaagnSy4brtihMUMc9Xdxri_GxtMQyj0CXWrCrKjkqKEVCt0z1MWTzt/exec";
 
-function getProducts() {
-  const stored = localStorage.getItem('products');
-  if (!stored) {
-    localStorage.setItem('products', JSON.stringify(DEFAULT_PRODUCTS));
-    return DEFAULT_PRODUCTS;
-  }
-  return JSON.parse(stored);
+function jsonp(url) {
+  return new Promise((resolve, reject) => {
+    const callbackName = 'jsonpCallback_' + Date.now() + '_' + Math.floor(Math.random() * 10000);
+    const script = document.createElement('script');
+
+    window[callbackName] = (data) => {
+      resolve(data);
+      document.body.removeChild(script);
+      delete window[callbackName];
+    };
+
+    script.onerror = () => reject(new Error('JSONP request failed'));
+    script.src = `${url}&callback=${callbackName}`;
+    document.body.appendChild(script);
+  });
 }
 
-function saveProducts(products) {
-  localStorage.setItem('products', JSON.stringify(products));
+function getCachedProducts() {
+  const cached = localStorage.getItem('cachedProducts');
+  return cached ? JSON.parse(cached) : null;
 }
 
-function getOrders() {
-  const stored = localStorage.getItem('orders');
-  return stored ? JSON.parse(stored) : [];
+function setCachedProducts(products) {
+  localStorage.setItem('cachedProducts', JSON.stringify(products));
 }
 
-function saveOrders(orders) {
-  localStorage.setItem('orders', JSON.stringify(orders));
+async function getProducts() {
+  const data = await jsonp(`${WEBHOOK_URL}?action=getProducts`);
+  const products = data.map(p => ({
+    ...p,
+    id: String(p.id),
+    price: Number(p.price),
+    trending: p.trending === true || p.trending === 'TRUE' || p.trending === 'true'
+  }));
+  setCachedProducts(products);
+  return products;
 }
 
-function addOrder(order) {
-  const orders = getOrders();
-  orders.unshift(order);
-  saveOrders(orders);
+async function saveProduct(product) {
+  const id = product.id || String(Date.now());
+  await fetch(WEBHOOK_URL, {
+    method: 'POST',
+    mode: 'no-cors',
+    headers: { 'Content-Type': 'text/plain' },
+    body: JSON.stringify({ action: 'addProduct', ...product, id })
+  });
+  return id;
 }
-function updateOrderStatus(orderId, newStatus) {
-  const orders = getOrders();
-  const order = orders.find(o => o.id === orderId);
-  if (order) {
-    order.status = newStatus;
-    saveOrders(orders);
-  }
+
+async function deleteProduct(id) {
+  await fetch(WEBHOOK_URL, {
+    method: 'POST',
+    mode: 'no-cors',
+    headers: { 'Content-Type': 'text/plain' },
+    body: JSON.stringify({ action: 'deleteProduct', id })
+  });
+}
+
+async function getOrders() {
+  const data = await jsonp(`${WEBHOOK_URL}?action=getOrders`);
+  return data.reverse();
+}
+
+async function addOrder(order) {
+  const id = String(Date.now());
+  await fetch(WEBHOOK_URL, {
+    method: 'POST',
+    mode: 'no-cors',
+    headers: { 'Content-Type': 'text/plain' },
+    body: JSON.stringify({ action: 'addOrder', ...order, id })
+  });
+  return id;
+}
+
+async function updateOrderStatus(id, status) {
+  await fetch(WEBHOOK_URL, {
+    method: 'POST',
+    mode: 'no-cors',
+    headers: { 'Content-Type': 'text/plain' },
+    body: JSON.stringify({ action: 'updateOrderStatus', id, status })
+  });
 }

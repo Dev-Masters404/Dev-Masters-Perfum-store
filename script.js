@@ -1,3 +1,5 @@
+const SHOP_WHATSAPP_NUMBER = "201015263209"; // غيّره برقم صاحب المحل لما تتفقوا
+
 // ---------- Language switcher ----------
 const langBtn = document.getElementById('langBtn');
 const htmlRoot = document.getElementById('htmlRoot');
@@ -8,7 +10,7 @@ langBtn.addEventListener('click', () => {
   applyLanguage();
 });
 
-function applyLanguage() {
+async function applyLanguage() {
   const isAr = currentLang === 'ar';
   htmlRoot.setAttribute('lang', isAr ? 'ar' : 'en');
   htmlRoot.setAttribute('dir', isAr ? 'rtl' : 'ltr');
@@ -18,8 +20,8 @@ function applyLanguage() {
     el.textContent = isAr ? el.dataset.ar : el.dataset.en;
   });
 
-  renderTrending();
-  renderProductsPage(getActiveFilter());
+  await renderTrending();
+  await renderProductsPage(getActiveFilter());
   renderCart();
   updateModalTotal();
 }
@@ -42,18 +44,37 @@ function productCardHTML(p) {
   `;
 }
 
-function renderTrending() {
+async function renderTrending() {
   const grid = document.getElementById('trendingGrid');
   if (!grid) return;
-  const products = getProducts().filter(p => p.trending);
-  grid.innerHTML = products.map(productCardHTML).join('');
+
+  const cached = getCachedProducts();
+  if (cached) {
+    grid.innerHTML = cached.filter(p => p.trending).map(productCardHTML).join('');
+    attachAddToCartListeners();
+  } else {
+    grid.innerHTML = `<p class="loading-state">${currentLang === 'ar' ? 'جاري التحميل...' : 'Loading...'}</p>`;
+  }
+
+  const fresh = (await getProducts()).filter(p => p.trending);
+  grid.innerHTML = fresh.map(productCardHTML).join('');
   attachAddToCartListeners();
 }
 
-function renderProductsPage(filter = 'all') {
+async function renderProductsPage(filter = 'all') {
   const grid = document.getElementById('productsGrid');
   if (!grid) return;
-  const all = getProducts();
+
+  const cached = getCachedProducts();
+  if (cached) {
+    const filteredCached = filter === 'all' ? cached : cached.filter(p => p.category === filter);
+    grid.innerHTML = filteredCached.map(productCardHTML).join('');
+    attachAddToCartListeners();
+  } else {
+    grid.innerHTML = `<p class="loading-state">${currentLang === 'ar' ? 'جاري التحميل...' : 'Loading...'}</p>`;
+  }
+
+  const all = await getProducts();
   const filtered = filter === 'all' ? all : all.filter(p => p.category === filter);
   grid.innerHTML = filtered.map(productCardHTML).join('');
   attachAddToCartListeners();
@@ -192,8 +213,29 @@ function updateModalTotal() {
   modalTotalEl.textContent = `${cartTotal + deliveryFee} ${currency}`;
 }
 
-checkoutForm.addEventListener('submit', (e) => {
+function buildWhatsAppMessage(order) {
+  const lines = [
+    `📦 طلب جديد`,
+    `الاسم: ${order.name}`,
+    `التليفون: ${order.phone}`,
+    order.address ? `العنوان: ${order.address}` : `الاستلام: من المحل`,
+    `التوصيل: ${order.delivery === 'delivery' ? 'توصيل' : 'استلام من المحل'}`,
+    `الدفع: ${order.payment === 'cash' ? 'نقدي' : 'محفظة إلكترونية'}`,
+    ``,
+    `المنتجات:`,
+    ...order.items.map(i => `- ${i.nameAr} × ${i.qty}`),
+    ``,
+    `الإجمالي: ${order.total} ج.م`
+  ];
+  return lines.join('\n');
+}
+
+checkoutForm.addEventListener('submit', async (e) => {
   e.preventDefault();
+
+  const submitBtn = checkoutForm.querySelector('button[type="submit"]');
+  submitBtn.disabled = true;
+  submitBtn.textContent = currentLang === 'ar' ? 'جاري الإرسال...' : 'Sending...';
 
   const deliveryMethod = document.querySelector('input[name="deliveryMethod"]:checked').value;
   const paymentMethod = document.querySelector('input[name="paymentMethod"]:checked').value;
@@ -201,7 +243,6 @@ checkoutForm.addEventListener('submit', (e) => {
   const cartTotal = cart.reduce((sum, item) => sum + item.price * item.qty, 0);
 
   const order = {
-    id: Date.now(),
     name: document.getElementById('custName').value,
     phone: document.getElementById('custPhone').value,
     address: deliveryMethod === 'delivery' ? custAddress.value : '',
@@ -213,24 +254,34 @@ checkoutForm.addEventListener('submit', (e) => {
     status: 'pending'
   };
 
-  addOrder(order);
+  try {
+    await addOrder(order);
 
-  cart = [];
-  renderCart();
-  closeCheckoutModal();
-  closeCartDrawer();
-  checkoutForm.reset();
-  alert(currentLang === 'ar' ? 'تم استلام طلبك بنجاح، هنتواصل معاك قريب!' : 'Your order has been received, we will contact you soon!');
+    const waLink = `https://wa.me/${SHOP_WHATSAPP_NUMBER}?text=${encodeURIComponent(buildWhatsAppMessage(order))}`;
+    window.open(waLink, '_blank');
+
+    cart = [];
+    renderCart();
+    closeCheckoutModal();
+    closeCartDrawer();
+    checkoutForm.reset();
+  } catch (err) {
+    alert(currentLang === 'ar' ? 'حصل خطأ، حاول تاني' : 'Something went wrong, try again');
+    console.error(err);
+  } finally {
+    submitBtn.disabled = false;
+    submitBtn.textContent = currentLang === 'ar' ? 'تأكيد الطلب' : 'Confirm Order';
+  }
 });
 
 // ---------- Filter (products.html only) ----------
 const filterBtns = document.querySelectorAll('.filter-btn');
 if (filterBtns.length) {
   filterBtns.forEach(btn => {
-    btn.addEventListener('click', () => {
+    btn.addEventListener('click', async () => {
       filterBtns.forEach(b => b.classList.remove('active'));
       btn.classList.add('active');
-      renderProductsPage(btn.dataset.filter);
+      await renderProductsPage(btn.dataset.filter);
     });
   });
 }
